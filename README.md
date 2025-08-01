@@ -21,15 +21,15 @@ Un servidor MCP (Model Context Protocol) que proporciona operaciones CRUD para s
 
 ```typescript
 interface Service {
-  id: number;
-  name: string;
-  description?: string;
-  price: number;
-  duration: number; // en minutos
-  category?: string;
-  company_id: number;
-  created_at?: string;
-  updated_at?: string;
+	id: number;
+	name: string;
+	description?: string;
+	price: number;
+	duration: number; // en minutos
+	category?: string;
+	company_id: number;
+	created_at?: string;
+	updated_at?: string;
 }
 ```
 
@@ -37,21 +37,21 @@ interface Service {
 
 1. **Clona e instala dependencias:**
 
-   ```bash
-   npm install
-   ```
+    ```bash
+    npm install
+    ```
 
 2. **Configura variables de entorno:**
 
-   ```bash
-   cp .env.example .env
-   # Edita .env con tus credenciales de Supabase
-   ```
+    ```bash
+    cp .env.example .env
+    # Edita .env con tus credenciales de Supabase
+    ```
 
 3. **Compila el proyecto:**
-   ```bash
-   npm run build
-   ```
+    ```bash
+    npm run build
+    ```
 
 ## Uso
 
@@ -79,16 +79,16 @@ Agrega esta configuración a tu archivo de configuración de Claude Desktop:
 
 ```json
 {
-  "mcpServers": {
-    "supabase-services": {
-      "command": "node",
-      "args": ["path/to/mcp-supabase-server/dist/index.js"],
-      "env": {
-        "SUPABASE_URL": "http://127.0.0.1:54321",
-        "SUPABASE_ANON_KEY": "tu-anon-key-aqui"
-      }
-    }
-  }
+	"mcpServers": {
+		"supabase-services": {
+			"command": "node",
+			"args": ["path/to/mcp-supabase-server/dist/index.js"],
+			"env": {
+				"SUPABASE_URL": "http://127.0.0.1:54321",
+				"SUPABASE_ANON_KEY": "tu-anon-key-aqui"
+			}
+		}
+	}
 }
 ```
 
@@ -98,27 +98,29 @@ Agrega esta configuración a tu archivo de configuración de Claude Desktop:
 
 ```json
 {
-  "name": "list_services",
-  "arguments": {
-    "company_id": 1,
-    "category": "beauty"
-  }
+	"name": "list_services",
+	"arguments": {
+		"company_id": 1,
+		"category": "beauty"
+	}
 }
 ```
+
+**Nota:** El `company_id` es **requerido** para todas las operaciones de listado.
 
 ### Crear servicio
 
 ```json
 {
-  "name": "create_service",
-  "arguments": {
-    "name": "Corte de Cabello",
-    "description": "Corte de cabello profesional",
-    "price": 25.0,
-    "duration": 30,
-    "category": "beauty",
-    "company_id": 1
-  }
+	"name": "create_service",
+	"arguments": {
+		"name": "Corte de Cabello",
+		"description": "Corte de cabello profesional",
+		"price": 25.0,
+		"duration": 30,
+		"category": "beauty",
+		"company_id": 1
+	}
 }
 ```
 
@@ -126,12 +128,12 @@ Agrega esta configuración a tu archivo de configuración de Claude Desktop:
 
 ```json
 {
-  "name": "update_service",
-  "arguments": {
-    "id": 1,
-    "price": 30.0,
-    "duration": 45
-  }
+	"name": "update_service",
+	"arguments": {
+		"id": 1,
+		"price": 30.0,
+		"duration": 45
+	}
 }
 ```
 
@@ -139,10 +141,10 @@ Agrega esta configuración a tu archivo de configuración de Claude Desktop:
 
 ```json
 {
-  "name": "delete_service",
-  "arguments": {
-    "id": 1
-  }
+	"name": "delete_service",
+	"arguments": {
+		"id": 1
+	}
 }
 ```
 
@@ -200,4 +202,5 @@ src/
 ## Licencia
 
 MIT
+
 # Appointment-Booking-Mcp
