@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Service, ServiceInsert, ServiceUpdate, ServiceFilter } from '../types/index.js';
+import { Service, ServiceInsert, ServiceUpdate, ServiceFilter, Company, CompanyInsert, CompanyUpdate, CompanyFilter } from '../types/index.js';
 
 // Database interface for our specific tables
 interface Database {
@@ -9,6 +9,11 @@ interface Database {
 				Row: Service;
 				Insert: ServiceInsert;
 				Update: ServiceUpdate;
+			};
+			companies: {
+				Row: Company;
+				Insert: CompanyInsert;
+				Update: CompanyUpdate;
 			};
 		};
 	};
@@ -104,6 +109,91 @@ export class SupabaseConnection {
 
 		if (error) {
 			throw new Error(`Failed to delete service: ${error.message}`);
+		}
+
+		return true;
+	}
+
+	// List all companies with optional filtering
+	async listCompanies(filter?: CompanyFilter): Promise<Company[]> {
+		let query = this.client.from('companies').select('*');
+
+		if (filter?.name) {
+			query = query.ilike('name', `%${filter.name}%`);
+		}
+		if (filter?.email) {
+			query = query.eq('email', filter.email);
+		}
+
+		const { data, error } = await query.order('created_at', { ascending: false });
+
+		if (error) {
+			throw new Error(`Failed to list companies: ${error.message}`);
+		}
+
+		return data || [];
+	}
+
+	// Get company by ID
+	async getCompanyById(id: number): Promise<Company | null> {
+		const { data, error } = await this.client
+			.from('companies')
+			.select('*')
+			.eq('id', id)
+			.single();
+
+		if (error) {
+			if (error.code === 'PGRST116') {
+				return null; // Not found
+			}
+			throw new Error(`Failed to get company: ${error.message}`);
+		}
+
+		return data;
+	}
+
+	// Create a new company
+	async createCompany(company: CompanyInsert): Promise<Company> {
+		const { data, error } = await this.client
+			.from('companies')
+			.insert(company)
+			.select()
+			.single();
+
+		if (error) {
+			throw new Error(`Failed to create company: ${error.message}`);
+		}
+
+		return data;
+	}
+
+	// Update an existing company
+	async updateCompany(companyUpdate: CompanyUpdate): Promise<Company> {
+		const { id, ...updateData } = companyUpdate;
+
+		const { data, error } = await this.client
+			.from('companies')
+			.update({
+				...updateData,
+				updated_at: new Date().toISOString(),
+			})
+			.eq('id', id)
+			.select()
+			.single();
+
+		if (error) {
+			throw new Error(`Failed to update company: ${error.message}`);
+		}
+
+		return data;
+	}
+
+	// Delete a company
+	async deleteCompany(id: number): Promise<boolean> {
+		const { error } = await this.client.from('companies').delete().eq('id', id);
+
+		if (error) {
+			throw new Error(`Failed to delete company: ${error.message}`);
 		}
 
 		return true;

@@ -7,7 +7,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 import { SupabaseConnection } from './database/index.js';
-import { ServicesTools } from './tools/index.js';
+import { ServicesTools, CompaniesTools } from './tools/index.js';
 
 // Load environment variables
 dotenv.config();
@@ -16,6 +16,7 @@ export class MCPServer {
 	private app: express.Application;
 	private db: SupabaseConnection;
 	private servicesTools: ServicesTools;
+	private companiesTools: CompaniesTools;
 	private server: McpServer;
 	private transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
 
@@ -35,6 +36,7 @@ export class MCPServer {
 
 		// Initialize tools
 		this.servicesTools = new ServicesTools(this.db);
+		this.companiesTools = new CompaniesTools(this.db);
 
 		// Initialize MCP server
 		this.server = new McpServer({
@@ -243,6 +245,145 @@ export class MCPServer {
 				};
 			}
 		);
+
+		this.server.registerTool(
+			'list_companies',
+			{
+				description: 'List all companies with optional filtering by name or email',
+				inputSchema: {
+					name: z
+						.string()
+						.optional()
+						.describe('Filter by company name (partial match, case insensitive)'),
+					email: z.string().optional().describe('Filter by company email (exact match)'),
+				},
+			},
+			async (args: { name?: string; email?: string }) => {
+				const result = await this.companiesTools.listCompanies(args);
+				if (result.isError) {
+					return {
+						content: [{ type: 'text', text: result.content[0].text }],
+						isError: true,
+					};
+				}
+				return {
+					content: [{ type: 'text', text: result.content[0].text }],
+				};
+			}
+		);
+
+		this.server.registerTool(
+			'create_company',
+			{
+				description: 'Create a new company',
+				inputSchema: {
+					name: z
+						.string()
+						.min(1)
+						.max(255)
+						.describe('Company name (required, max 255 characters)'),
+					description: z.string().optional().describe('Company description (optional)'),
+					email: z
+						.string()
+						.email()
+						.optional()
+						.describe('Company email (optional, must be valid email format)'),
+					phone: z
+						.string()
+						.max(20)
+						.optional()
+						.describe('Company phone (optional, max 20 characters)'),
+					address: z.string().optional().describe('Company address (optional)'),
+				},
+			},
+			async (args: {
+				name: string;
+				description?: string;
+				email?: string;
+				phone?: string;
+				address?: string;
+			}) => {
+				const result = await this.companiesTools.createCompany(args);
+				if (result.isError) {
+					return {
+						content: [{ type: 'text', text: result.content[0].text }],
+						isError: true,
+					};
+				}
+				return {
+					content: [{ type: 'text', text: result.content[0].text }],
+				};
+			}
+		);
+
+		this.server.registerTool(
+			'update_company',
+			{
+				description: 'Update an existing company',
+				inputSchema: {
+					id: z.number().positive().int().describe('Company ID to update (required)'),
+					name: z
+						.string()
+						.min(1)
+						.max(255)
+						.optional()
+						.describe('Company name (optional, max 255 characters)'),
+					description: z.string().optional().describe('Company description (optional)'),
+					email: z
+						.string()
+						.email()
+						.optional()
+						.describe('Company email (optional, must be valid email format)'),
+					phone: z
+						.string()
+						.max(20)
+						.optional()
+						.describe('Company phone (optional, max 20 characters)'),
+					address: z.string().optional().describe('Company address (optional)'),
+				},
+			},
+			async (args: {
+				id: number;
+				name?: string;
+				description?: string;
+				email?: string;
+				phone?: string;
+				address?: string;
+			}) => {
+				const result = await this.companiesTools.updateCompany(args);
+				if (result.isError) {
+					return {
+						content: [{ type: 'text', text: result.content[0].text }],
+						isError: true,
+					};
+				}
+				return {
+					content: [{ type: 'text', text: result.content[0].text }],
+				};
+			}
+		);
+
+		this.server.registerTool(
+			'delete_company',
+			{
+				description: 'Delete a company by ID',
+				inputSchema: {
+					id: z.number().positive().int().describe('Company ID to delete (required)'),
+				},
+			},
+			async (args: { id: number }) => {
+				const result = await this.companiesTools.deleteCompany(args);
+				if (result.isError) {
+					return {
+						content: [{ type: 'text', text: result.content[0].text }],
+						isError: true,
+					};
+				}
+				return {
+					content: [{ type: 'text', text: result.content[0].text }],
+				};
+			}
+		);
 	}
 
 	private setupRoutes() {
@@ -337,6 +478,10 @@ export class MCPServer {
 				console.error('   - create_service: Create a new service');
 				console.error('   - update_service: Update an existing service');
 				console.error('   - delete_service: Delete a service by ID');
+				console.error('   - list_companies: List all companies with optional filtering by name or email');
+				console.error('   - create_company: Create a new company');
+				console.error('   - update_company: Update an existing company');
+				console.error('   - delete_company: Delete a company by ID');
 			});
 		} catch (error) {
 			console.error('❌ Failed to start MCP server:', error);
