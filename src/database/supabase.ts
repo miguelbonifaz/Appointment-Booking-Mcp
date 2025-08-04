@@ -28,7 +28,13 @@ export class SupabaseConnection {
 
 	// List all services filtered by company_id with optional additional filtering
 	async listServices(filter: ServiceFilter): Promise<Service[]> {
-		let query = this.client.from('services').select('*').eq('company_id', filter.company_id);
+		let query = this.client
+			.from('services')
+			.select(`
+				*,
+				companies!inner(id, company_id)
+			`)
+			.eq('companies.company_id', filter.company_id);
 
 		if (filter.category) {
 			query = query.eq('category', filter.category);
