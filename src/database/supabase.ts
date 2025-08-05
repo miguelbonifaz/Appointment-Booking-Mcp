@@ -1,5 +1,14 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Service, ServiceInsert, ServiceUpdate, ServiceFilter, Company, CompanyInsert, CompanyUpdate, CompanyFilter } from '../types/index.js';
+import {
+	Service,
+	ServiceInsert,
+	ServiceUpdate,
+	ServiceFilter,
+	Company,
+	CompanyInsert,
+	CompanyUpdate,
+	CompanyFilter,
+} from '../types/index.js';
 
 // Database interface for our specific tables
 interface Database {
@@ -30,10 +39,12 @@ export class SupabaseConnection {
 	async listServices(filter: ServiceFilter): Promise<Service[]> {
 		let query = this.client
 			.from('services')
-			.select(`
+			.select(
+				`
 				*,
-				companies!inner(id, company_id)
-			`)
+				companies!inner(*)
+			`
+			)
 			.eq('companies.company_id', filter.company_id);
 
 		if (filter.category) {
@@ -59,7 +70,10 @@ export class SupabaseConnection {
 	async getServiceById(id: number): Promise<Service | null> {
 		const { data, error } = await this.client
 			.from('services')
-			.select('*')
+			.select(`
+				*,
+				company:companies(*)
+			`)
 			.eq('id', id)
 			.single();
 
@@ -75,9 +89,25 @@ export class SupabaseConnection {
 
 	// Create a new service
 	async createService(service: ServiceInsert): Promise<Service> {
+		// Search company_id in companies table
+		const { data: companyData, error: companyError } = await this.client
+			.from('companies')
+			.select('id')
+			.eq('company_id', service.company_id)
+			.single();
+
+		if (companyError || !companyData) {
+			throw new Error(`Company with company_id ${service.company_id} not found`);
+		}
+
+		const serviceWithInternalId = {
+			...service,
+			company_id: companyData.id,
+		};
+
 		const { data, error } = await this.client
 			.from('services')
-			.insert(service)
+			.insert(serviceWithInternalId)
 			.select()
 			.single();
 
@@ -206,23 +236,46 @@ export class SupabaseConnection {
 	}
 
 	// Validate user authorization
-	async validateUserAuthorization(user_number: string, company_id: number): Promise<boolean> {
+	// Código CORREGIDO
+	async validateUserAuthorization(
+		user_number: string,
+		external_company_id: number
+	): Promise<boolean> {
 		try {
-			console.log(`Validating authorization for user_number: ${user_number}, company_id: ${company_id}`);
-			
+			console.log(
+				`Validating authorization for user_number: ${user_number}, external_company_id: ${external_company_id}`
+			);
+
+			// 1. Primero buscar el ID interno de la empresa
+			const { data: companyData, error: companyError } = await this.client
+				.from('companies')
+				.select('id, company_id')
+				.eq('company_id', external_company_id) // Busca por company_id "1944"
+				.single();
+
+			console.log({external_company_id});
+
+			if (companyError || !companyData) {
+				console.log('Company not found');
+				return false;
+			}
+
+			// 2. Luego validar autorización con el ID interno
 			const { data, error } = await this.client
 				.from('authorized_users')
-				.select('user_number')
-				.eq('user_number', user_number)
-				.eq('company_id', company_id)
+				.select('*')
+				.eq('phone_number', user_number)
+				.eq('company_id', companyData.id) // Usa el ID interno (1)
 				.single();
 
 			if (error) {
+				console.log('Authorization check failed:', error);
 				return false;
 			}
 
 			return !!data;
-		} catch {
+		} catch (error) {
+			console.log('Validation error:', error);
 			return false;
 		}
 	}

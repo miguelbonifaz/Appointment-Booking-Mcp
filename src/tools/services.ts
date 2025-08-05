@@ -135,10 +135,9 @@ export class ServicesTools {
 			}
 
 			// Validate user authorization (use company_id from existing service if not provided)
-			const companyId = updateData.company_id || existingService.company_id;
 			const isAuthorized = await this.db.validateUserAuthorization(
 				updateData.user_number,
-				companyId
+				existingService.company.company_id
 			);
 
 			if (!isAuthorized) {
@@ -206,7 +205,7 @@ export class ServicesTools {
 			// Validate user authorization
 			const isAuthorized = await this.db.validateUserAuthorization(
 				user_number,
-				existingService.company_id
+				existingService.company.company_id
 			);
 
 			if (!isAuthorized) {

@@ -9,6 +9,9 @@ export interface Service {
   company_id: number;
   created_at?: string;
   updated_at?: string;
+  company: {
+    company_id: number;
+  };
 }
 
 export interface ServiceInsert {

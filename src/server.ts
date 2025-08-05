@@ -492,7 +492,9 @@ export class MCPServer {
 				console.error('   - create_service: Create a new service');
 				console.error('   - update_service: Update an existing service');
 				console.error('   - delete_service: Delete a service by ID');
-				console.error('   - list_companies: List all companies with optional filtering by name or email');
+				console.error(
+					'   - list_companies: List all companies with optional filtering by name or email'
+				);
 				console.error('   - create_company: Create a new company');
 				console.error('   - update_company: Update an existing company');
 				console.error('   - delete_company: Delete a company by ID');
