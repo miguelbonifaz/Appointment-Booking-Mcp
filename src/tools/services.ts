@@ -66,8 +66,21 @@ export class ServicesTools {
 			// Validate arguments
 			const serviceData = ServiceInsertSchema.parse(args);
 
+			// Validate user authorization
+			const isAuthorized = await this.db.validateUserAuthorization(
+				serviceData.user_number,
+				serviceData.company_id
+			);
+
+			if (!isAuthorized) {
+				throw new Error('User not authorized to create services for this company');
+			}
+
+			// Remove user_number from service data before creating
+			const { user_number, ...createData } = serviceData;
+
 			// Create service in database
-			const newService = await this.db.createService(serviceData);
+			const newService = await this.db.createService(createData);
 
 			return {
 				content: [
@@ -121,8 +134,22 @@ export class ServicesTools {
 				throw new Error(`Service with ID ${updateData.id} not found`);
 			}
 
+			// Validate user authorization (use company_id from existing service if not provided)
+			const companyId = updateData.company_id || existingService.company_id;
+			const isAuthorized = await this.db.validateUserAuthorization(
+				updateData.user_number,
+				companyId
+			);
+
+			if (!isAuthorized) {
+				throw new Error('User not authorized to update services for this company');
+			}
+
+			// Remove user_number from update data before updating
+			const { user_number, ...serviceUpdateData } = updateData;
+
 			// Update service in database
-			const updatedService = await this.db.updateService(updateData);
+			const updatedService = await this.db.updateService(serviceUpdateData);
 
 			return {
 				content: [
@@ -168,12 +195,22 @@ export class ServicesTools {
 	async deleteService(args: unknown) {
 		try {
 			// Validate arguments
-			const { id } = ServiceDeleteSchema.parse(args);
+			const { id, user_number } = ServiceDeleteSchema.parse(args);
 
 			// Check if service exists first
 			const existingService = await this.db.getServiceById(id);
 			if (!existingService) {
 				throw new Error(`Service with ID ${id} not found`);
+			}
+
+			// Validate user authorization
+			const isAuthorized = await this.db.validateUserAuthorization(
+				user_number,
+				existingService.company_id
+			);
+
+			if (!isAuthorized) {
+				throw new Error('User not authorized to delete services for this company');
 			}
 
 			// Delete service from database
@@ -281,8 +318,12 @@ export class ServicesTools {
 							type: 'number',
 							description: 'Company ID that owns this service (required)',
 						},
+						user_number: {
+							type: 'string',
+							description: 'User number for authorization (required)',
+						},
 					},
-					required: ['name', 'price', 'duration', 'company_id'],
+					required: ['name', 'price', 'duration', 'company_id', 'user_number'],
 					additionalProperties: false,
 				},
 			},
@@ -321,8 +362,12 @@ export class ServicesTools {
 							type: 'number',
 							description: 'Company ID that owns this service (optional)',
 						},
+						user_number: {
+							type: 'string',
+							description: 'User number for authorization (required)',
+						},
 					},
-					required: ['id'],
+					required: ['id', 'user_number'],
 					additionalProperties: false,
 				},
 			},
@@ -336,8 +381,12 @@ export class ServicesTools {
 							type: 'number',
 							description: 'Service ID to delete (required)',
 						},
+						user_number: {
+							type: 'string',
+							description: 'User number for authorization (required)',
+						},
 					},
-					required: ['id'],
+					required: ['id', 'user_number'],
 					additionalProperties: false,
 				},
 			},

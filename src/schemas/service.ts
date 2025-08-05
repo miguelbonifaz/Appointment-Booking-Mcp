@@ -20,6 +20,7 @@ export const ServiceInsertSchema = z.object({
 	duration: z.number().positive().int('Duration must be a positive integer'),
 	category: z.string().max(100, 'Category too long').optional(),
 	company_id: z.number().positive().int('Company ID must be a positive integer'),
+	user_number: z.string().min(1, 'User number is required for authorization'),
 });
 
 export const ServiceUpdateSchema = z.object({
@@ -30,6 +31,7 @@ export const ServiceUpdateSchema = z.object({
 	duration: z.number().positive().int('Duration must be a positive integer').optional(),
 	category: z.string().max(100, 'Category too long').optional(),
 	company_id: z.number().positive().int('Company ID must be a positive integer').optional(),
+	user_number: z.string().min(1, 'User number is required for authorization'),
 });
 
 export const ServiceFilterSchema = z.object({
@@ -41,4 +43,5 @@ export const ServiceFilterSchema = z.object({
 
 export const ServiceDeleteSchema = z.object({
 	id: z.number().positive().int('ID must be a positive integer'),
+	user_number: z.string().min(1, 'User number is required for authorization'),
 });

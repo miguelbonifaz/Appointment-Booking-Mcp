@@ -137,6 +137,10 @@ export class MCPServer {
 						.positive()
 						.int()
 						.describe('Company ID that owns this service (required)'),
+					user_number: z
+						.string()
+						.min(1)
+						.describe('User number for authorization (required)'),
 				},
 			},
 			async (args: {
@@ -146,6 +150,7 @@ export class MCPServer {
 				duration: number;
 				category?: string;
 				company_id: number;
+				user_number: string;
 			}) => {
 				const result = await this.servicesTools.createService(args);
 				// Convert the result format to MCP format
@@ -198,6 +203,10 @@ export class MCPServer {
 						.int()
 						.optional()
 						.describe('Company ID that owns this service (optional)'),
+					user_number: z
+						.string()
+						.min(1)
+						.describe('User number for authorization (required)'),
 				},
 			},
 			async (args: {
@@ -208,6 +217,7 @@ export class MCPServer {
 				duration?: number;
 				category?: string;
 				company_id?: number;
+				user_number: string;
 			}) => {
 				const result = await this.servicesTools.updateService(args);
 				// Convert the result format to MCP format
@@ -229,9 +239,13 @@ export class MCPServer {
 				description: 'Delete a service by ID',
 				inputSchema: {
 					id: z.number().positive().int().describe('Service ID to delete (required)'),
+					user_number: z
+						.string()
+						.min(1)
+						.describe('User number for authorization (required)'),
 				},
 			},
-			async (args: { id: number }) => {
+			async (args: { id: number; user_number: string }) => {
 				const result = await this.servicesTools.deleteService(args);
 				// Convert the result format to MCP format
 				if (result.isError) {

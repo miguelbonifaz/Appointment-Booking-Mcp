@@ -205,6 +205,28 @@ export class SupabaseConnection {
 		return true;
 	}
 
+	// Validate user authorization
+	async validateUserAuthorization(user_number: string, company_id: number): Promise<boolean> {
+		try {
+			console.log(`Validating authorization for user_number: ${user_number}, company_id: ${company_id}`);
+			
+			const { data, error } = await this.client
+				.from('authorized_users')
+				.select('user_number')
+				.eq('user_number', user_number)
+				.eq('company_id', company_id)
+				.single();
+
+			if (error) {
+				return false;
+			}
+
+			return !!data;
+		} catch {
+			return false;
+		}
+	}
+
 	// Test connection
 	async testConnection(): Promise<boolean> {
 		try {
