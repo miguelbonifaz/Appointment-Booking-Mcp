@@ -79,10 +79,12 @@ export class SupabaseConnection {
 	async getServiceById(id: number): Promise<Service | null> {
 		const { data, error } = await this.client
 			.from('services')
-			.select(`
+			.select(
+				`
 				*,
 				company:companies(*)
-			`)
+			`
+			)
 			.eq('id', id)
 			.single();
 
@@ -244,57 +246,40 @@ export class SupabaseConnection {
 		return true;
 	}
 
-	// Validate user authorization
-	// Código CORREGIDO
-	async validateUserAuthorization(
-		user_number: string,
-		external_company_id: number
-	): Promise<boolean> {
+	async validateUserAuthorization(user_number: string, company_id: number): Promise<boolean> {
 		try {
-			console.log(
-				`Validating authorization for user_number: ${user_number}, external_company_id: ${external_company_id}`
-			);
-
-			// 1. Primero buscar el ID interno de la empresa
-			const { data: companyData, error: companyError } = await this.client
+			const { data: company, error: companyError } = await this.client
 				.from('companies')
 				.select('id, company_id')
-				.eq('company_id', external_company_id) // Busca por company_id "1944"
+				.eq('company_id', company_id)
 				.single();
 
-			console.log({external_company_id});
-
-			if (companyError || !companyData) {
-				console.log('Company not found');
+			if (companyError || !company) {
+				console.error('Company not found');
 				return false;
 			}
 
-			// 2. Luego validar autorización con el ID interno
 			const { data, error } = await this.client
 				.from('authorized_users')
 				.select('*')
 				.eq('phone_number', user_number)
-				.eq('company_id', companyData.id) // Usa el ID interno (1)
+				.eq('company_id', company.id)
 				.single();
 
 			if (error) {
-				console.log('Authorization check failed:', error);
+				console.error('Authorization check failed:', error);
 				return false;
 			}
 
 			return !!data;
 		} catch (error) {
-			console.log('Validation error:', error);
+			console.error('Validation error:', error);
 			return false;
 		}
 	}
 
-	// List all employees filtered by company_id with optional additional filtering
 	async listEmployees(filter: EmployeeFilter): Promise<Employee[]> {
-		let query = this.client
-			.from('employees')
-			.select('*')
-			.eq('company_id', filter.company_id);
+		let query = this.client.from('employees').select('*').eq('company_id', filter.company_id);
 
 		if (filter.name) {
 			query = query.ilike('name', `%${filter.name}%`);
