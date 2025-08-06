@@ -66,9 +66,22 @@ export class EmployeesTools {
 			// Validate arguments
 			const validatedData = EmployeeInsertSchema.parse(args);
 
+			// Validate user authorization
+			const isAuthorized = await this.db.validateUserAuthorization(
+				validatedData.user_number,
+				validatedData.company_id
+			);
+
+			if (!isAuthorized) {
+				throw new Error(
+					`User ${validatedData.user_number} is not authorized to manage employees for company ${validatedData.company_id}`
+				);
+			}
+
 			// Generate random email if not provided
+			const { user_number, ...employeeDataWithoutUser } = validatedData;
 			const employeeData = {
-				...validatedData,
+				...employeeDataWithoutUser,
 				email:
 					validatedData.email ||
 					`employee_${Date.now()}_${Math.random().toString(36).substring(2, 7)}@company.local`,
@@ -132,8 +145,22 @@ export class EmployeesTools {
 				throw new Error(`Employee with ID ${updateData.id} not found`);
 			}
 
+			const isAuthorized = await this.db.validateUserAuthorization(
+				updateData.user_number,
+				existingEmployee.company.company_id
+			);
+
+			if (!isAuthorized) {
+				throw new Error(
+					`User ${updateData.user_number} is not authorized to manage employees for company ${companyId}`
+				);
+			}
+
+			// Remove user_number from update data since it's not stored in employee table
+			const { user_number, ...updateDataWithoutUser } = updateData;
+
 			// Update employee in database
-			const updatedEmployee = await this.db.updateEmployee(updateData);
+			const updatedEmployee = await this.db.updateEmployee(updateDataWithoutUser);
 
 			return {
 				content: [
@@ -179,12 +206,24 @@ export class EmployeesTools {
 	async deleteEmployee(args: unknown) {
 		try {
 			// Validate arguments
-			const { id } = EmployeeDeleteSchema.parse(args);
+			const { id, user_number } = EmployeeDeleteSchema.parse(args);
 
 			// Check if employee exists first
 			const existingEmployee = await this.db.getEmployeeById(id);
 			if (!existingEmployee) {
 				throw new Error(`Employee with ID ${id} not found`);
+			}
+
+			// Validate user authorization
+			const isAuthorized = await this.db.validateUserAuthorization(
+				user_number,
+				existingEmployee.company.company_id
+			);
+
+			if (!isAuthorized) {
+				throw new Error(
+					`User ${user_number} is not authorized to manage employees for company ${existingEmployee.company_id}`
+				);
 			}
 
 			// Delete employee from database
@@ -283,8 +322,12 @@ export class EmployeesTools {
 							type: 'number',
 							description: 'Company ID that owns this employee (required)',
 						},
+						user_number: {
+							type: 'string',
+							description: 'User phone number for authorization (required)',
+						},
 					},
-					required: ['name', 'company_id'],
+					required: ['name', 'company_id', 'user_number'],
 					additionalProperties: false,
 				},
 			},
@@ -314,8 +357,12 @@ export class EmployeesTools {
 							type: 'number',
 							description: 'Company ID that owns this employee (optional)',
 						},
+						user_number: {
+							type: 'string',
+							description: 'User phone number for authorization (required)',
+						},
 					},
-					required: ['id'],
+					required: ['id', 'user_number'],
 					additionalProperties: false,
 				},
 			},
@@ -329,8 +376,12 @@ export class EmployeesTools {
 							type: 'number',
 							description: 'Employee ID to delete (required)',
 						},
+						user_number: {
+							type: 'string',
+							description: 'User phone number for authorization (required)',
+						},
 					},
-					required: ['id'],
+					required: ['id', 'user_number'],
 					additionalProperties: false,
 				},
 			},

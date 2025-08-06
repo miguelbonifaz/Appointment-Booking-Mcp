@@ -279,7 +279,17 @@ export class SupabaseConnection {
 	}
 
 	async listEmployees(filter: EmployeeFilter): Promise<Employee[]> {
-		let query = this.client.from('employees').select('*').eq('company_id', filter.company_id);
+		let { data: company, error: companyError } = await this.client
+			.from('companies')
+			.select('id, company_id')
+			.eq('company_id', filter.company_id)
+			.single();
+
+		if (companyError || !company) {
+			throw new Error(`Company with company_id ${filter.company_id} not found`);
+		}
+
+		let query = this.client.from('employees').select('*').eq('company_id', company.id);
 
 		if (filter.name) {
 			query = query.ilike('name', `%${filter.name}%`);
@@ -301,10 +311,12 @@ export class SupabaseConnection {
 	async getEmployeeById(id: number): Promise<Employee | null> {
 		const { data, error } = await this.client
 			.from('employees')
-			.select(`
+			.select(
+				`
 				*,
 				company:companies(*)
-			`)
+			`
+			)
 			.eq('id', id)
 			.single();
 
@@ -325,7 +337,7 @@ export class SupabaseConnection {
 			.select('id, company_id')
 			.eq('company_id', employee.company_id)
 			.single();
-			
+
 		if (companyError || !company) {
 			throw new Error(`Company with company_id ${employee.company_id} not found`);
 		}

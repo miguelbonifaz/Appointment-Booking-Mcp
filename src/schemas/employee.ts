@@ -6,6 +6,7 @@ export const EmployeeInsertSchema = z.object({
 	email: z.string().email('Invalid email format').optional(),
 	phone: z.string().max(20, 'Phone must be less than 20 characters').optional(),
 	company_id: z.number().int().positive('Company ID must be a positive integer'),
+	user_number: z.string().min(1, 'User number is required for authorization'),
 });
 
 export const EmployeeUpdateSchema = z.object({
@@ -14,10 +15,12 @@ export const EmployeeUpdateSchema = z.object({
 	email: z.string().email('Invalid email format').optional(),
 	phone: z.string().max(20, 'Phone must be less than 20 characters').optional(),
 	company_id: z.number().int().positive('Company ID must be a positive integer').optional(),
+	user_number: z.string().min(1, 'User number is required for authorization'),
 });
 
 export const EmployeeDeleteSchema = z.object({
 	id: z.number().int().positive('ID must be a positive integer'),
+	user_number: z.string().min(1, 'User number is required for authorization'),
 });
 
 export const EmployeeFilterSchema = z.object({

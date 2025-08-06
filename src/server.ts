@@ -404,7 +404,8 @@ export class MCPServer {
 		this.server.registerTool(
 			'list_employees',
 			{
-				description: 'List all employees filtered by company_id with optional filtering by name or email',
+				description:
+					'List all employees filtered by company_id with optional filtering by name or email',
 				inputSchema: {
 					company_id: z
 						.number()
@@ -456,6 +457,10 @@ export class MCPServer {
 						.positive()
 						.int()
 						.describe('Company ID that owns this employee (required)'),
+					user_number: z
+						.string()
+						.min(1)
+						.describe('User number for authorization (required)'),
 				},
 			},
 			async (args: {
@@ -463,6 +468,7 @@ export class MCPServer {
 				email: string;
 				phone?: string;
 				company_id: number;
+				user_number: string;
 			}) => {
 				const result = await this.employeesTools.createEmployee(args);
 				if (result.isError) {
@@ -505,6 +511,10 @@ export class MCPServer {
 						.int()
 						.optional()
 						.describe('Company ID that owns this employee (optional)'),
+					user_number: z
+						.string()
+						.min(1)
+						.describe('User number for authorization (required)'),
 				},
 			},
 			async (args: {
@@ -513,6 +523,7 @@ export class MCPServer {
 				email?: string;
 				phone?: string;
 				company_id?: number;
+				user_number: string;
 			}) => {
 				const result = await this.employeesTools.updateEmployee(args);
 				if (result.isError) {
@@ -533,9 +544,13 @@ export class MCPServer {
 				description: 'Delete an employee by ID',
 				inputSchema: {
 					id: z.number().positive().int().describe('Employee ID to delete (required)'),
+					user_number: z
+						.string()
+						.min(1)
+						.describe('User number for authorization (required)'),
 				},
 			},
-			async (args: { id: number }) => {
+			async (args: { id: number; user_number: string }) => {
 				const result = await this.employeesTools.deleteEmployee(args);
 				if (result.isError) {
 					return {
