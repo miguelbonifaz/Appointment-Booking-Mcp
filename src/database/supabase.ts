@@ -301,7 +301,10 @@ export class SupabaseConnection {
 	async getEmployeeById(id: number): Promise<Employee | null> {
 		const { data, error } = await this.client
 			.from('employees')
-			.select('*')
+			.select(`
+				*,
+				company:companies(*)
+			`)
 			.eq('id', id)
 			.single();
 
@@ -317,9 +320,24 @@ export class SupabaseConnection {
 
 	// Create a new employee
 	async createEmployee(employee: EmployeeInsert): Promise<Employee> {
+		const { data: company, error: companyError } = await this.client
+			.from('companies')
+			.select('id, company_id')
+			.eq('company_id', employee.company_id)
+			.single();
+			
+		if (companyError || !company) {
+			throw new Error(`Company with company_id ${employee.company_id} not found`);
+		}
+
+		const employeeWithInternalId = {
+			...employee,
+			company_id: company.id,
+		};
+
 		const { data, error } = await this.client
 			.from('employees')
-			.insert(employee)
+			.insert(employeeWithInternalId)
 			.select()
 			.single();
 

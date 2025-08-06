@@ -64,7 +64,18 @@ export class EmployeesTools {
 	async createEmployee(args: unknown) {
 		try {
 			// Validate arguments
-			const employeeData = EmployeeInsertSchema.parse(args);
+			const validatedData = EmployeeInsertSchema.parse(args);
+
+			// Generate random email if not provided
+			const employeeData = {
+				...validatedData,
+				email:
+					validatedData.email ||
+					`employee_${Date.now()}_${Math.random().toString(36).substring(2, 7)}@company.local`,
+				phone:
+					validatedData.phone ||
+					`+1${Math.floor(Math.random() * 9000000000) + 1000000000}`,
+			};
 
 			// Create employee in database
 			const newEmployee = await this.db.createEmployee(employeeData);
@@ -235,7 +246,8 @@ export class EmployeesTools {
 						},
 						name: {
 							type: 'string',
-							description: 'Filter by employee name (partial match, case insensitive)',
+							description:
+								'Filter by employee name (partial match, case insensitive)',
 						},
 						email: {
 							type: 'string',
@@ -248,7 +260,8 @@ export class EmployeesTools {
 			},
 			{
 				name: 'create_employee',
-				description: 'Create a new employee',
+				description:
+					'Create a new employee - only requires name, email and phone will be auto-generated if not provided',
 				inputSchema: {
 					type: 'object',
 					properties: {
@@ -258,18 +271,20 @@ export class EmployeesTools {
 						},
 						email: {
 							type: 'string',
-							description: 'Employee email (required, must be valid email format)',
+							description:
+								'Employee email (optional, will be auto-generated if not provided)',
 						},
 						phone: {
 							type: 'string',
-							description: 'Employee phone (optional, max 20 characters)',
+							description:
+								'Employee phone (optional, will be auto-generated if not provided)',
 						},
 						company_id: {
 							type: 'number',
 							description: 'Company ID that owns this employee (required)',
 						},
 					},
-					required: ['name', 'email', 'company_id'],
+					required: ['name', 'company_id'],
 					additionalProperties: false,
 				},
 			},
