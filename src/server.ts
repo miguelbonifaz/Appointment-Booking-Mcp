@@ -7,7 +7,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 import { SupabaseConnection } from './database/index.js';
-import { ServicesTools, CompaniesTools } from './tools/index.js';
+import { ServicesTools, CompaniesTools, EmployeesTools } from './tools/index.js';
 
 // Load environment variables
 dotenv.config();
@@ -17,6 +17,7 @@ export class MCPServer {
 	private db: SupabaseConnection;
 	private servicesTools: ServicesTools;
 	private companiesTools: CompaniesTools;
+	private employeesTools: EmployeesTools;
 	private server: McpServer;
 	private transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
 
@@ -37,6 +38,7 @@ export class MCPServer {
 		// Initialize tools
 		this.servicesTools = new ServicesTools(this.db);
 		this.companiesTools = new CompaniesTools(this.db);
+		this.employeesTools = new EmployeesTools(this.db);
 
 		// Initialize MCP server
 		this.server = new McpServer({
@@ -398,6 +400,154 @@ export class MCPServer {
 				};
 			}
 		);
+
+		this.server.registerTool(
+			'list_employees',
+			{
+				description: 'List all employees filtered by company_id with optional filtering by name or email',
+				inputSchema: {
+					company_id: z
+						.number()
+						.positive()
+						.int()
+						.describe('Company ID to filter employees (required)'),
+					name: z
+						.string()
+						.optional()
+						.describe('Filter by employee name (partial match, case insensitive)'),
+					email: z.string().optional().describe('Filter by employee email (exact match)'),
+				},
+			},
+			async (args: { company_id: number; name?: string; email?: string }) => {
+				const result = await this.employeesTools.listEmployees(args);
+				if (result.isError) {
+					return {
+						content: [{ type: 'text', text: result.content[0].text }],
+						isError: true,
+					};
+				}
+				return {
+					content: [{ type: 'text', text: result.content[0].text }],
+				};
+			}
+		);
+
+		this.server.registerTool(
+			'create_employee',
+			{
+				description: 'Create a new employee',
+				inputSchema: {
+					name: z
+						.string()
+						.min(1)
+						.max(255)
+						.describe('Employee name (required, max 255 characters)'),
+					email: z
+						.string()
+						.email()
+						.describe('Employee email (required, must be valid email format)'),
+					phone: z
+						.string()
+						.max(20)
+						.optional()
+						.describe('Employee phone (optional, max 20 characters)'),
+					company_id: z
+						.number()
+						.positive()
+						.int()
+						.describe('Company ID that owns this employee (required)'),
+				},
+			},
+			async (args: {
+				name: string;
+				email: string;
+				phone?: string;
+				company_id: number;
+			}) => {
+				const result = await this.employeesTools.createEmployee(args);
+				if (result.isError) {
+					return {
+						content: [{ type: 'text', text: result.content[0].text }],
+						isError: true,
+					};
+				}
+				return {
+					content: [{ type: 'text', text: result.content[0].text }],
+				};
+			}
+		);
+
+		this.server.registerTool(
+			'update_employee',
+			{
+				description: 'Update an existing employee',
+				inputSchema: {
+					id: z.number().positive().int().describe('Employee ID to update (required)'),
+					name: z
+						.string()
+						.min(1)
+						.max(255)
+						.optional()
+						.describe('Employee name (optional, max 255 characters)'),
+					email: z
+						.string()
+						.email()
+						.optional()
+						.describe('Employee email (optional, must be valid email format)'),
+					phone: z
+						.string()
+						.max(20)
+						.optional()
+						.describe('Employee phone (optional, max 20 characters)'),
+					company_id: z
+						.number()
+						.positive()
+						.int()
+						.optional()
+						.describe('Company ID that owns this employee (optional)'),
+				},
+			},
+			async (args: {
+				id: number;
+				name?: string;
+				email?: string;
+				phone?: string;
+				company_id?: number;
+			}) => {
+				const result = await this.employeesTools.updateEmployee(args);
+				if (result.isError) {
+					return {
+						content: [{ type: 'text', text: result.content[0].text }],
+						isError: true,
+					};
+				}
+				return {
+					content: [{ type: 'text', text: result.content[0].text }],
+				};
+			}
+		);
+
+		this.server.registerTool(
+			'delete_employee',
+			{
+				description: 'Delete an employee by ID',
+				inputSchema: {
+					id: z.number().positive().int().describe('Employee ID to delete (required)'),
+				},
+			},
+			async (args: { id: number }) => {
+				const result = await this.employeesTools.deleteEmployee(args);
+				if (result.isError) {
+					return {
+						content: [{ type: 'text', text: result.content[0].text }],
+						isError: true,
+					};
+				}
+				return {
+					content: [{ type: 'text', text: result.content[0].text }],
+				};
+			}
+		);
 	}
 
 	private setupRoutes() {
@@ -498,6 +648,12 @@ export class MCPServer {
 				console.error('   - create_company: Create a new company');
 				console.error('   - update_company: Update an existing company');
 				console.error('   - delete_company: Delete a company by ID');
+				console.error(
+					'   - list_employees: List all employees filtered by company_id with optional filtering by name or email'
+				);
+				console.error('   - create_employee: Create a new employee');
+				console.error('   - update_employee: Update an existing employee');
+				console.error('   - delete_employee: Delete an employee by ID');
 			});
 		} catch (error) {
 			console.error('❌ Failed to start MCP server:', error);

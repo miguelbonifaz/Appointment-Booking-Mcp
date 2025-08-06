@@ -8,6 +8,10 @@ import {
 	CompanyInsert,
 	CompanyUpdate,
 	CompanyFilter,
+	Employee,
+	EmployeeInsert,
+	EmployeeUpdate,
+	EmployeeFilter,
 } from '../types/index.js';
 
 // Database interface for our specific tables
@@ -23,6 +27,11 @@ interface Database {
 				Row: Company;
 				Insert: CompanyInsert;
 				Update: CompanyUpdate;
+			};
+			employees: {
+				Row: Employee;
+				Insert: EmployeeInsert;
+				Update: EmployeeUpdate;
 			};
 		};
 	};
@@ -278,6 +287,94 @@ export class SupabaseConnection {
 			console.log('Validation error:', error);
 			return false;
 		}
+	}
+
+	// List all employees filtered by company_id with optional additional filtering
+	async listEmployees(filter: EmployeeFilter): Promise<Employee[]> {
+		let query = this.client
+			.from('employees')
+			.select('*')
+			.eq('company_id', filter.company_id);
+
+		if (filter.name) {
+			query = query.ilike('name', `%${filter.name}%`);
+		}
+		if (filter.email) {
+			query = query.eq('email', filter.email);
+		}
+
+		const { data, error } = await query.order('created_at', { ascending: false });
+
+		if (error) {
+			throw new Error(`Failed to list employees: ${error.message}`);
+		}
+
+		return data || [];
+	}
+
+	// Get employee by ID
+	async getEmployeeById(id: number): Promise<Employee | null> {
+		const { data, error } = await this.client
+			.from('employees')
+			.select('*')
+			.eq('id', id)
+			.single();
+
+		if (error) {
+			if (error.code === 'PGRST116') {
+				return null; // Not found
+			}
+			throw new Error(`Failed to get employee: ${error.message}`);
+		}
+
+		return data;
+	}
+
+	// Create a new employee
+	async createEmployee(employee: EmployeeInsert): Promise<Employee> {
+		const { data, error } = await this.client
+			.from('employees')
+			.insert(employee)
+			.select()
+			.single();
+
+		if (error) {
+			throw new Error(`Failed to create employee: ${error.message}`);
+		}
+
+		return data;
+	}
+
+	// Update an existing employee
+	async updateEmployee(employeeUpdate: EmployeeUpdate): Promise<Employee> {
+		const { id, ...updateData } = employeeUpdate;
+
+		const { data, error } = await this.client
+			.from('employees')
+			.update({
+				...updateData,
+				updated_at: new Date().toISOString(),
+			})
+			.eq('id', id)
+			.select()
+			.single();
+
+		if (error) {
+			throw new Error(`Failed to update employee: ${error.message}`);
+		}
+
+		return data;
+	}
+
+	// Delete an employee
+	async deleteEmployee(id: number): Promise<boolean> {
+		const { error } = await this.client.from('employees').delete().eq('id', id);
+
+		if (error) {
+			throw new Error(`Failed to delete employee: ${error.message}`);
+		}
+
+		return true;
 	}
 
 	// Test connection
